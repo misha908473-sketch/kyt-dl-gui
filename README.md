@@ -1,4 +1,4 @@
-# yt-dlp GUI
+# yt-dlp GUI (WARNING!!!!!!!!! VIBE-CODED!!!!!!!!!)
 
 Компактный загрузчик на C++17 и Qt Widgets, с интерфейсом по [KDE HIG](https://develop.kde.org/hig/). Системные шрифты, палитра и иконки; без обязательной зависимости от KDE Frameworks. В Plasma оформление Breeze применяется через установленную системную интеграцию Qt.
 
