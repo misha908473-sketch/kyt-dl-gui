@@ -1,10 +1,15 @@
-name: Build Fedora and Debian release packages
+name: Build Arch, Fedora, and Debian release packages
 
 on:
   push:
     branches: [main]
     paths:
       - .github/workflows/build-linux-release.yml
+      - CMakeLists.txt
+      - "*.h"
+      - packaging/**
+      - README.md
+      - README.ru.md
   workflow_dispatch:
 
 permissions:
@@ -25,32 +30,31 @@ jobs:
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            build-essential ca-certificates cmake curl debhelper dpkg-dev g++ \
+            build-essential ca-certificates cmake debhelper dpkg-dev g++ \
             qt6-base-dev qt6-base-dev-tools tar
 
-      - name: Build .deb from the release source archive
+      - name: Build package and source archive
         run: |
           set -eux
-          archive="kyt-dl-gui-${RELEASE_TAG}.tar.gz"
-          curl -fL "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${archive}" -o "/tmp/${archive}"
-          mkdir -p /tmp/kyt-dl-gui-source
-          first_entry="$(tar -tzf "/tmp/${archive}" | sed -n '1p')"
-          strip_components=0
-          case "${first_entry}" in */*) strip_components=1 ;; esac
-          tar -xzf "/tmp/${archive}" --strip-components="${strip_components}" -C /tmp/kyt-dl-gui-source
-          cp -a packaging/debian/debian /tmp/kyt-dl-gui-source/
-          mkdir -p /tmp/kyt-dl-gui-source/packaging/common
-          cp packaging/common/kyt-dl-gui.desktop /tmp/kyt-dl-gui-source/packaging/common/
-          chmod 0755 /tmp/kyt-dl-gui-source/debian/rules
-          cd /tmp/kyt-dl-gui-source
+          cp -a packaging/debian/debian ./debian
+          chmod 0755 debian/rules
           dpkg-buildpackage -b -us -uc -a amd64
-          mkdir -p "${GITHUB_WORKSPACE}/out"
-          cp ../kyt-dl-gui_*.deb "${GITHUB_WORKSPACE}/out/"
+          mkdir -p out/source
+          cp ../kyt-dl-gui_*.deb out/
+          mkdir -p /tmp/source/kyt-dl-gui-${RELEASE_TAG}
+          tar --exclude=.git -cf - . | tar -xf - -C /tmp/source/kyt-dl-gui-${RELEASE_TAG}
+          tar -czf "out/source/kyt-dl-gui-${RELEASE_TAG}.tar.gz" -C /tmp/source "kyt-dl-gui-${RELEASE_TAG}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: debian-package
           path: out/*.deb
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-archive
+          path: out/source/*.tar.gz
           if-no-files-found: error
 
   fedora:
@@ -62,28 +66,21 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          dnf install -y ca-certificates cmake curl gcc-c++ make qt6-qtbase-devel rpm-build tar gzip
+          dnf install -y ca-certificates cmake gcc-c++ make qt6-qtbase-devel rpm-build tar gzip
 
-      - name: Build .rpm from the release source archive
+      - name: Build RPM from current source
         run: |
           set -eux
-          archive="kyt-dl-gui-${RELEASE_TAG}.tar.gz"
-          curl -fL "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${archive}" -o "/tmp/${archive}"
           topdir="${HOME}/rpmbuild"
           mkdir -p "${topdir}/BUILD" "${topdir}/BUILDROOT" "${topdir}/RPMS" "${topdir}/SOURCES" "${topdir}/SPECS" "${topdir}/SRPMS"
-          mkdir -p /tmp/kyt-dl-gui-source
-          first_entry="$(tar -tzf "/tmp/${archive}" | sed -n '1p')"
-          strip_components=0
-          case "${first_entry}" in */*) strip_components=1 ;; esac
-          tar -xzf "/tmp/${archive}" --strip-components="${strip_components}" -C /tmp/kyt-dl-gui-source
-          mkdir -p /tmp/normalized/kyt-dl-gui-${RELEASE_TAG}
-          cp -a /tmp/kyt-dl-gui-source/. /tmp/normalized/kyt-dl-gui-${RELEASE_TAG}/
-          tar -czf "${topdir}/SOURCES/kyt-dl-gui-${RELEASE_TAG}.tar.gz" -C /tmp/normalized "kyt-dl-gui-${RELEASE_TAG}"
+          mkdir -p /tmp/source/kyt-dl-gui-${RELEASE_TAG}
+          tar --exclude=.git -cf - . | tar -xf - -C /tmp/source/kyt-dl-gui-${RELEASE_TAG}
+          tar -czf "${topdir}/SOURCES/kyt-dl-gui-${RELEASE_TAG}.tar.gz" -C /tmp/source "kyt-dl-gui-${RELEASE_TAG}"
           cp packaging/common/kyt-dl-gui.desktop "${topdir}/SOURCES/"
           cp packaging/fedora/kyt-dl-gui.spec "${topdir}/SPECS/"
           rpmbuild -ba "${topdir}/SPECS/kyt-dl-gui.spec" --define "_topdir ${topdir}"
-          mkdir -p "${GITHUB_WORKSPACE}/out"
-          cp "${topdir}/RPMS/x86_64/kyt-dl-gui-${RELEASE_TAG}-"*.x86_64.rpm "${GITHUB_WORKSPACE}/out/"
+          mkdir -p out
+          cp "${topdir}/RPMS/x86_64/kyt-dl-gui-${RELEASE_TAG}-"*.x86_64.rpm out/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -91,12 +88,64 @@ jobs:
           path: out/*.rpm
           if-no-files-found: error
 
+  arch:
+    name: Build Arch Linux package
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: pacman -Syu --noconfirm --needed cmake gcc qt6-base fakeroot
+
+      - name: Build Arch package
+        run: |
+          set -eux
+          mkdir -p /tmp/arch-build/source out
+          tar --exclude=.git -cf - . | tar -xf - -C /tmp/arch-build/source
+          cat > /tmp/arch-build/PKGBUILD <<'PKGBUILD'
+          pkgname=kyt-dl-gui
+          pkgver=0.0.1
+          pkgrel=1
+          pkgdesc="Qt desktop application for downloading video and audio with yt-dlp"
+          arch=('x86_64')
+          url="https://github.com/misha908473-sketch/kyt-dl-gui"
+          license=('unknown')
+          depends=('qt6-base' 'yt-dlp' 'ffmpeg')
+          makedepends=('cmake' 'gcc' 'make')
+          source=()
+          sha256sums=()
+
+          prepare() {
+            mkdir -p "$srcdir/kyt-dl-gui"
+            cp -a "$startdir/source/." "$srcdir/kyt-dl-gui/"
+          }
+
+          build() {
+            cmake -S "$srcdir/kyt-dl-gui" -B "$srcdir/kyt-dl-gui/build" -DCMAKE_BUILD_TYPE=Release
+            cmake --build "$srcdir/kyt-dl-gui/build" --parallel
+          }
+
+          package() {
+            install -Dm755 "$srcdir/kyt-dl-gui/build/ytdlp-gui" "$pkgdir/usr/bin/ytdlp-gui"
+            install -Dm644 "$srcdir/kyt-dl-gui/packaging/common/kyt-dl-gui.desktop" "$pkgdir/usr/share/applications/kyt-dl-gui.desktop"
+          }
+          PKGBUILD
+          useradd --create-home builder
+          chown -R builder:builder /tmp/arch-build
+          su builder -c 'cd /tmp/arch-build && makepkg --force --noconfirm'
+          cp /tmp/arch-build/*.pkg.tar.zst out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch-package
+          path: out/*.pkg.tar.zst
+          if-no-files-found: error
+
   attach-to-release:
     name: Attach packages to release 0.0.1
     runs-on: ubuntu-latest
-    needs: [debian, fedora]
-    permissions:
-      contents: write
+    needs: [debian, fedora, arch]
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -106,21 +155,17 @@ jobs:
         with:
           name: fedora-package
           path: dist/fedora
-      - name: Remove automatically generated debug packages
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name' |
-          while IFS= read -r asset; do
-            case "${asset}" in
-              kyt-dl-gui-dbgsym_*|kyt-dl-gui-debuginfo-*|kyt-dl-gui-debugsource-*)
-                gh release delete-asset "${RELEASE_TAG}" "${asset}" --yes --repo "${GITHUB_REPOSITORY}"
-                ;;
-            esac
-          done
+      - uses: actions/download-artifact@v4
+        with:
+          name: arch-package
+          path: dist/arch
+      - uses: actions/download-artifact@v4
+        with:
+          name: source-archive
+          path: dist/source
 
-      - name: Upload package files to the existing release
+      - name: Upload current packages and source to the existing release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${RELEASE_TAG}" dist/debian/*.deb dist/fedora/*.rpm --clobber --repo "${GITHUB_REPOSITORY}"
+          gh release upload "${RELEASE_TAG}" dist/debian/*.deb dist/fedora/*.rpm dist/arch/*.pkg.tar.zst dist/source/*.tar.gz --clobber --repo "${GITHUB_REPOSITORY}"
