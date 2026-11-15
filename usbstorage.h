@@ -87,7 +87,7 @@ public:
             if (hasPreference(volume)) continue;
             QDialog dialog(parent); dialog.setObjectName("usbDestinationPrompt"); dialog.setWindowTitle(uiText("Сохранять музыку на USB?", "Save music to USB?"));
             auto *layout = new QVBoxLayout(&dialog);
-            auto *message = new QLabel(uiText("Обнаружен носитель «", "Storage “") + volume.name + "».\nСохранять музыку в " + QDir(volume.root).filePath("yt-dlp") + "?\nОбычная папка загрузок останется в настройках.");
+            auto *message = new QLabel(uiText("Обнаружен носитель «", "Storage “") + volume.name + uiText("».\\nСохранять музыку в ", "”.\\nSave music to ") + QDir(volume.root).filePath("yt-dlp") + uiText("?\\nОбычная папка загрузок останется в настройках.", "?\\nYour regular download folder will remain in settings."));
             message->setTextFormat(Qt::PlainText); message->setWordWrap(true); layout->addWidget(message);
             auto *rememberChoice = new QCheckBox(uiText("Запомнить выбор", "Remember my choice")); rememberChoice->setObjectName("rememberUsb");
             rememberChoice->setEnabled(!volume.id.isEmpty());
