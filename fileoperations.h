@@ -6,6 +6,48 @@ struct FileOperationResult {
     QStringList errors, removed, copied;
     QMap<QString, QString> moved;
 };
+inline bool copyFileNoOverwrite(const QString &source, const QString &target, QString *error = nullptr) {
+    QFile input(source);
+    if (!input.open(QIODevice::ReadOnly)) {
+        if (error) *error = input.errorString();
+        return false;
+    }
+
+    // NewOnly asks the OS to create the destination exclusively, so another
+    // process cannot slip a file in after an exists() check and have it overwritten.
+    QFile output(target);
+    if (!output.open(QIODevice::WriteOnly | QIODevice::NewOnly)) {
+        if (error) *error = output.errorString();
+        return false;
+    }
+
+    const auto fail = [&](const QString &message) {
+        output.close();
+        output.remove();
+        if (error) *error = message;
+        return false;
+    };
+    QByteArray buffer(1024 * 1024, '\0');
+    while (true) {
+        const qint64 bytesRead = input.read(buffer.data(), buffer.size());
+        if (bytesRead < 0) return fail(input.errorString());
+        if (bytesRead == 0) {
+            if (input.atEnd()) break;
+            return fail("Не удалось прочитать файл");
+        }
+        qint64 offset = 0;
+        while (offset < bytesRead) {
+            const qint64 bytesWritten = output.write(buffer.constData() + offset, bytesRead - offset);
+            if (bytesWritten <= 0) return fail(output.errorString());
+            offset += bytesWritten;
+        }
+    }
+    if (!output.flush()) return fail(output.errorString());
+    output.close();
+    if (!output.setPermissions(input.permissions())) return fail(output.errorString());
+    return true;
+}
+
 inline FileOperationResult operateFiles(FileOperation operation, const QStringList &sources, const QString &directory = {}) {
     FileOperationResult result;
     for (const auto &source : sources) {
@@ -20,12 +62,18 @@ inline FileOperationResult operateFiles(FileOperation operation, const QStringLi
         if (QFileInfo(target).absoluteFilePath() == info.absoluteFilePath()) {
             result.errors << source + ": выбрана исходная папка"; continue;
         }
-        // QFile never overwrites an existing target. Across filesystems rename uses a safe copy/remove fallback.
-        if (QFile::exists(target)) { result.errors << target + ": файл с таким именем уже существует"; continue; }
+        const QFileInfo targetInfo(target);
+        if (targetInfo.exists() || targetInfo.isSymLink()) {
+            result.errors << target + ": файл с таким именем уже существует"; continue;
+        }
+        if (operation == FileOperation::Copy) {
+            QString error;
+            if (copyFileNoOverwrite(source, target, &error)) result.copied << target;
+            else result.errors << source + ": " + error;
+            continue;
+        }
         QFile file(source);
-        const bool success = operation == FileOperation::Copy ? file.copy(target) : file.rename(target);
-        if (!success) result.errors << source + ": " + file.errorString();
-        else if (operation == FileOperation::Copy) result.copied << target;
+        if (!file.rename(target)) result.errors << source + ": " + file.errorString();
         else result.moved.insert(source, target);
     }
     return result;
