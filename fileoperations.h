@@ -1,4 +1,5 @@
 #pragma once
+#include "uilanguage.h"
 #include <QtCore>
 
 enum class FileOperation { Trash, Move, Copy };
@@ -33,7 +34,7 @@ inline bool copyFileNoOverwrite(const QString &source, const QString &target, QS
         if (bytesRead < 0) return fail(input.errorString());
         if (bytesRead == 0) {
             if (input.atEnd()) break;
-            return fail("Не удалось прочитать файл");
+            return fail(uiText("Не удалось прочитать файл", "Could not read file"));
         }
         qint64 offset = 0;
         while (offset < bytesRead) {
@@ -52,19 +53,19 @@ inline FileOperationResult operateFiles(FileOperation operation, const QStringLi
     FileOperationResult result;
     for (const auto &source : sources) {
         const QFileInfo info(source);
-        if (!info.isFile()) { result.errors << source + ": файл недоступен"; continue; }
+        if (!info.isFile()) { result.errors << source + uiText(": файл недоступен", ": file is unavailable"); continue; }
         if (operation == FileOperation::Trash) {
             if (QFile::moveToTrash(source)) result.removed << source;
-            else result.errors << source + ": не удалось переместить в корзину";
+            else result.errors << source + uiText(": не удалось переместить в корзину", ": could not move to Trash");
             continue;
         }
         const QString target = QDir(directory).absoluteFilePath(info.fileName());
         if (QFileInfo(target).absoluteFilePath() == info.absoluteFilePath()) {
-            result.errors << source + ": выбрана исходная папка"; continue;
+            result.errors << source + uiText(": выбрана исходная папка", ": source folder selected"); continue;
         }
         const QFileInfo targetInfo(target);
         if (targetInfo.exists() || targetInfo.isSymLink()) {
-            result.errors << target + ": файл с таким именем уже существует"; continue;
+            result.errors << target + uiText(": файл с таким именем уже существует", ": a file with this name already exists"); continue;
         }
         if (operation == FileOperation::Copy) {
             QString error;
