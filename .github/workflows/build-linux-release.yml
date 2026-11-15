@@ -133,7 +133,7 @@ jobs:
           PKGBUILD
           useradd --create-home builder
           chown -R builder:builder /tmp/arch-build
-          su builder -c 'cd /tmp/arch-build && makepkg --force --noconfirm'
+          su builder -c 'cd /tmp/arch-build && makepkg --nodeps --force --noconfirm'
           cp /tmp/arch-build/*.pkg.tar.zst out/
 
       - uses: actions/upload-artifact@v4
