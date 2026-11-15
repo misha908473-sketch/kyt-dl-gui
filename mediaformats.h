@@ -1,4 +1,5 @@
 #pragma once
+#include "uilanguage.h"
 #include <QtCore>
 #include <algorithm>
 
@@ -45,14 +46,14 @@ inline QList<MediaFormat> availableFormats(const QJsonObject &info, bool audioOn
 
 inline QString formatLabel(const MediaFormat &f, bool audioOnly, qint64 extraAudioBytes = 0) {
     QStringList text;
-    text << (audioOnly ? (f.bitrate > 0 ? QString("%1 кбит/с").arg(qRound(f.bitrate)) : "Аудио")
-                      : QString("%1p%2").arg(f.height).arg(f.fps > 30 ? QString(" · %1 кадров/с").arg(qRound(f.fps)) : ""));
+    text << (audioOnly ? (f.bitrate > 0 ? QString(uiText("%1 кбит/с", "%1 kbps")).arg(qRound(f.bitrate)) : uiText("Аудио", "Audio"))
+                      : QString("%1p%2").arg(f.height).arg(f.fps > 30 ? QString(uiText(" · %1 кадров/с", " · %1 fps")).arg(qRound(f.fps)) : ""));
     text << f.extension.toUpper() << f.codec;
     if (f.bytes > 0) {
         const bool combined = !audioOnly && !f.hasAudio;
         const qint64 size = f.bytes + (combined ? extraAudioBytes : 0);
         text << (f.approximate || combined ? "≈ " : "") + QLocale().formattedDataSize(size)
-            + (combined && extraAudioBytes <= 0 ? " + аудио" : "");
-    } else text << "размер неизвестен";
+            + (combined && extraAudioBytes <= 0 ? uiText(" + аудио", " + audio") : "");
+    } else text << uiText("размер неизвестен", "size unknown");
     return text.join(" · ");
 }
