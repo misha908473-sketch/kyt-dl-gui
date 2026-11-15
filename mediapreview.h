@@ -1,4 +1,5 @@
 #pragma once
+#include "uilanguage.h"
 #include <QtWidgets>
 #include <QtNetwork>
 #include <functional>
@@ -49,7 +50,7 @@ public:
         row->setContentsMargins(0, 0, 0, 0);
         cover = new QLabel;
         cover->setFixedSize(96, 54); cover->setAlignment(Qt::AlignCenter);
-        cover->setAccessibleName("Обложка видео");
+        cover->setAccessibleName(uiText("Обложка видео", "Video cover"));
         row->addWidget(cover);
         auto *text = new QVBoxLayout;
         title = new QLabel; title->setObjectName("previewTitle");
@@ -65,8 +66,8 @@ public:
     }
     void reset() {
         cancel(); metadata = {}; currentUrl.clear(); output.clear();
-        title->setText("Предпросмотр появится после вставки ссылки");
-        description->setText("Название, длительность и доступное качество");
+        title->setText(uiText("Предпросмотр появится после вставки ссылки", "Preview will appear after you paste a link"));
+        description->setText(uiText("Название, длительность и доступное качество", "Title, duration, and available quality"));
         cover->setPixmap(QIcon::fromTheme("video-x-generic", style()->standardIcon(QStyle::SP_FileIcon)).pixmap(48, 48));
         if (changed) changed();
     }
@@ -75,12 +76,12 @@ public:
     QString url() const { return currentUrl; }
     void fetch(const QString &executable, const QString &address) {
         reset(); currentUrl = address; loading = true;
-        title->setText("Получение информации…");
-        description->setText("Проверяем доступное качество и размер файлов.");
+        title->setText(uiText("Получение информации…", "Getting information…"));
+        description->setText(uiText("Проверяем доступное качество и размер файлов.", "Checking available quality and file sizes."));
         if (changed) changed();
         const quint64 requestId = generation;
         const bool playlist = isYoutubePlaylistUrl(address);
-        if (playlist) description->setText("Получение списка композиций плейлиста…");
+        if (playlist) description->setText(uiText("Получение списка композиций плейлиста…", "Loading playlist tracks…"));
         auto *worker = new QProcess(this); fetcher = worker;
         auto *timeout = new QTimer(worker); timeout->setSingleShot(true);
         connect(timeout, &QTimer::timeout, worker, &QProcess::kill);
@@ -97,14 +98,14 @@ public:
             const QJsonDocument json = QJsonDocument::fromJson(output);
             if (json.isObject() && (success || (isPlaylistMetadata(json.object()) && json.object().value("entries").isArray()))) {
                 metadata = json.object();
-                title->setText(metadata.value("title").toString("Без названия"));
+                title->setText(metadata.value("title").toString(uiText("Без названия", "Untitled")));
                 QStringList details;
                 const QString author = metadata.value("uploader").toString(metadata.value("channel").toString());
                 if (!author.isEmpty()) details << author;
                 const auto seconds = qint64(metadata.value("duration").toDouble());
                 if (seconds > 0) details << QString("%1:%2:%3").arg(seconds / 3600).arg((seconds / 60) % 60, 2, 10, QChar('0')).arg(seconds % 60, 2, 10, QChar('0'));
-                if (metadata.value("is_live").toBool()) details << "Прямой эфир";
-                if (isPlaylistMetadata(metadata)) details << QString("Плейлист · %1 композиций").arg(metadata.value("entries").toArray().size());
+                if (metadata.value("is_live").toBool()) details << uiText("Прямой эфир", "Live stream");
+                if (isPlaylistMetadata(metadata)) details << QString(uiText("Плейлист · %1 композиций", "Playlist · %1 tracks")).arg(metadata.value("entries").toArray().size());
                 description->setText(details.join(" · "));
                 QString thumbnail = metadata.value("thumbnail").toString();
                 if (thumbnail.isEmpty()) {
@@ -113,8 +114,8 @@ public:
                 }
                 loadCover(thumbnail, requestId);
             } else {
-                title->setText("Не удалось получить предпросмотр");
-                description->setText("Можно скачать с общими настройками. Для повторного запроса вставьте ссылку заново.");
+                title->setText(uiText("Не удалось получить предпросмотр", "Could not load preview"));
+                description->setText(uiText("Можно скачать с общими настройками. Для повторного запроса вставьте ссылку заново.", "You can download with the general settings. Paste the link again to retry."));
             }
             worker->deleteLater();
             if (changed) changed();
