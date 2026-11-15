@@ -1,4 +1,5 @@
 #pragma once
+#include "uilanguage.h"
 #include <QtWidgets>
 #include <QtConcurrent>
 #include <QStorageInfo>
@@ -58,11 +59,11 @@ class DownloadQueue final : public QWidget {
         details->setEnabled(list->currentItem() != nullptr);
     }
     void updateStatus() {
-        if (fileBusy) status->setText("Обработка файлов…");
+        if (fileBusy) status->setText(uiText("Обработка файлов…", "Processing files…"));
         else {
             int waiting = 0;
             for (const auto &entry : entries) if (entry.state == Waiting) ++waiting;
-            status->setText(running.isEmpty() && !waiting ? "" : QString("Скачивается: %1 · Ожидает: %2").arg(running.size()).arg(waiting));
+            status->setText(running.isEmpty() && !waiting ? "" : QString(uiText("Скачивается: %1 · Ожидает: %2", "Downloading: %1 · Queued: %2")).arg(running.size()).arg(waiting));
         }
         status->setVisible(!status->text().isEmpty()); updateControls();
     }
@@ -86,13 +87,13 @@ class DownloadQueue final : public QWidget {
                 QString text = QString("%1%").arg(qBound(0, qRound(percent), 100));
                 if (fields.size() > 1 && fields[1].trimmed() != "Unknown") text += " · " + fields[1].trimmed();
                 row(id)->setText(1, text);
-                if (fields.size() > 2 && fields[2].trimmed() != "Unknown") row(id)->setToolTip(1, "Осталось: " + fields[2].trimmed());
+                if (fields.size() > 2 && fields[2].trimmed() != "Unknown") row(id)->setToolTip(1, uiText("Осталось: ", "Remaining: ") + fields[2].trimmed());
             }
         } else {
             auto &journal = entries[id].log; journal += text + '\n';
             if (journal.size() > 200000) journal.remove(0, journal.size() - 200000);
             if (list->currentItem() == row(id) && detailsDialog->isVisible()) log->appendPlainText(text);
-            if (row(id) && (text.startsWith("[Merger]") || text.startsWith("[ExtractAudio]"))) row(id)->setText(1, "Конвертация…");
+            if (row(id) && (text.startsWith("[Merger]") || text.startsWith("[ExtractAudio]"))) row(id)->setText(1, uiText("Конвертация…", "Converting…"));
         }
     }
     void consume(int id, bool flush = false) {
@@ -111,7 +112,7 @@ class DownloadQueue final : public QWidget {
         consume(id, true);
         auto *worker = running.take(id).process; worker->deleteLater();
         entries[id].state = success ? Done : Failed;
-        if (row(id)) row(id)->setText(1, success ? "Готово" : "Ошибка · см. подробности");
+        if (row(id)) row(id)->setText(1, success ? uiText("Готово", "Done") : uiText("Ошибка · см. подробности", "Error · see details"));
         const QStringList files = entries[id].files;
         if (fileReady) for (const auto &path : files) fileReady(path);
         updateStatus(); if (changed) changed();
@@ -131,13 +132,13 @@ class DownloadQueue final : public QWidget {
                 if (!identityMatches || !disk.isValid() || !disk.isReady() || disk.isReadOnly()
                     || QDir::cleanPath(disk.rootPath()) != QDir::cleanPath(job.requiredMount)
                     || QString::fromLocal8Bit(disk.device()) != job.requiredDevice) {
-                    entries[id].state = Failed; line(id, "Носитель отключён или недоступен. Файл не будет сохранён на системный диск.");
-                    row(id)->setText(1, "Носитель недоступен"); continue;
+                    entries[id].state = Failed; line(id, uiText("Носитель отключён или недоступен. Файл не будет сохранён на системный диск.", "Storage is disconnected or unavailable. The file will not be saved to the system drive."));
+                    row(id)->setText(1, uiText("Носитель недоступен", "Storage unavailable")); continue;
                 }
             }
             auto *worker = new QProcess(this); worker->setProcessChannelMode(QProcess::MergedChannels);
             entries[id].state = Running; running.insert(id, {worker, {}});
-            row(id)->setText(1, "Получение информации…");
+            row(id)->setText(1, uiText("Получение информации…", "Getting information…"));
             connect(worker, &QProcess::readyReadStandardOutput, this, [this, id] { consume(id); });
             connect(worker, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
                 [this, id](int code, QProcess::ExitStatus state) { finish(id, code == 0 && state == QProcess::NormalExit); });
@@ -152,12 +153,12 @@ class DownloadQueue final : public QWidget {
         const QStringList sources = selectedFiles(); if (sources.isEmpty() || fileBusy) return;
         QString directory;
         if (operation == FileOperation::Trash) {
-            QMessageBox question(QMessageBox::Question, "Удалить файлы", QString("Переместить выбранные файлы в корзину (%1)?").arg(sources.size()), QMessageBox::NoButton, this);
-            auto *yes = question.addButton("Удалить", QMessageBox::DestructiveRole);
-            auto *no = question.addButton("Отмена", QMessageBox::RejectRole); question.setDefaultButton(no); question.exec();
+            QMessageBox question(QMessageBox::Question, uiText("Удалить файлы", "Delete files"), QString(uiText("Переместить выбранные файлы в корзину (%1)?", "Move the selected files to Trash (%1)?")).arg(sources.size()), QMessageBox::NoButton, this);
+            auto *yes = question.addButton(uiText("Удалить", "Delete"), QMessageBox::DestructiveRole);
+            auto *no = question.addButton(uiText("Отмена", "Cancel"), QMessageBox::RejectRole); question.setDefaultButton(no); question.exec();
             if (question.clickedButton() != yes) return;
         } else {
-            directory = QFileDialog::getExistingDirectory(this, operation == FileOperation::Copy ? "Копировать в папку" : "Переместить в папку");
+            directory = QFileDialog::getExistingDirectory(this, operation == FileOperation::Copy ? uiText("Копировать в папку", "Copy to folder") : uiText("Переместить в папку", "Move to folder"));
             if (directory.isEmpty()) return;
         }
         fileBusy = true; updateStatus();
@@ -180,16 +181,16 @@ public:
     std::function<void()> changed;
     explicit DownloadQueue(QWidget *parent = nullptr) : QWidget(parent) {
         auto *layout = new QVBoxLayout(this); layout->setContentsMargins(0, 0, 0, 0);
-        auto *title = new QLabel("Загрузки"); QFont bold = title->font(); bold.setBold(true); title->setFont(bold); layout->addWidget(title);
-        list = new DownloadFileList; list->setObjectName("queueList"); list->setHeaderLabels({"Файл", "Состояние"});
+        auto *title = new QLabel(uiText("Загрузки", "Downloads")); QFont bold = title->font(); bold.setBold(true); title->setFont(bold); layout->addWidget(title);
+        list = new DownloadFileList; list->setObjectName("queueList"); list->setHeaderLabels({uiText("Файл", "File"), uiText("Состояние", "Status")});
         list->setRootIsDecorated(false); list->setMinimumHeight(140); list->setIconSize(QSize(64, 36));
         list->setSelectionMode(QAbstractItemView::ExtendedSelection); list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
         list->header()->setSectionResizeMode(0, QHeaderView::Stretch); list->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-        list->setAccessibleName("Загрузки и сохранённые файлы"); layout->addWidget(list, 1);
-        trash = new QAction(QIcon::fromTheme("user-trash"), "Удалить", this);
-        move = new QAction(QIcon::fromTheme("go-jump"), "Переместить", this);
-        copy = new QAction(QIcon::fromTheme("edit-copy"), "Копировать", this);
-        showInFolder = new QAction(QIcon::fromTheme("folder-open"), "Показать в папке", this);
+        list->setAccessibleName(uiText("Загрузки и сохранённые файлы", "Downloads and saved files")); layout->addWidget(list, 1);
+        trash = new QAction(QIcon::fromTheme("user-trash"), uiText("Удалить", "Delete"), this);
+        move = new QAction(QIcon::fromTheme("go-jump"), uiText("Переместить", "Move"), this);
+        copy = new QAction(QIcon::fromTheme("edit-copy"), uiText("Копировать", "Copy"), this);
+        showInFolder = new QAction(QIcon::fromTheme("folder-open"), uiText("Показать в папке", "Show in folder"), this);
         connect(showInFolder, &QAction::triggered, this, [this] { if (showFiles) showFiles(selectedFiles()); });
         list->setContextMenuPolicy(Qt::CustomContextMenu);
         connect(list, &QWidget::customContextMenuRequested, this, [this](const QPoint &point) {
@@ -200,8 +201,8 @@ public:
             menu.exec(list->viewport()->mapToGlobal(point));
         });
         status = new QLabel; status->setWordWrap(true); status->setTextFormat(Qt::PlainText); layout->addWidget(status);
-        details = new QAction(QIcon::fromTheme("document-properties"), "Подробности загрузки…", this);
-        detailsDialog = new QDialog(this); detailsDialog->setObjectName("downloadDetails"); detailsDialog->setWindowTitle("Подробности загрузки");
+        details = new QAction(QIcon::fromTheme("document-properties"), uiText("Подробности загрузки…", "Download details…"), this);
+        detailsDialog = new QDialog(this); detailsDialog->setObjectName("downloadDetails"); detailsDialog->setWindowTitle(uiText("Подробности загрузки", "Download details"));
         auto *detailsLayout = new QVBoxLayout(detailsDialog); log = new QPlainTextEdit; log->setReadOnly(true); log->setMaximumBlockCount(1500); detailsLayout->addWidget(log);
         auto *close = new QDialogButtonBox(QDialogButtonBox::Close); detailsLayout->addWidget(close);
         connect(close, &QDialogButtonBox::rejected, detailsDialog, &QDialog::hide); detailsDialog->resize(640, 360);
@@ -232,7 +233,7 @@ public:
             }
             if (fileReady) for (const auto &path : result.copied) fileReady(path);
             if (changed) changed(); updateStatus();
-            if (!result.errors.isEmpty()) QMessageBox::warning(this, "Не все файлы обработаны", result.errors.join('\n'));
+            if (!result.errors.isEmpty()) QMessageBox::warning(this, uiText("Не все файлы обработаны", "Some files could not be processed"), result.errors.join('\n'));
         });
         updateStatus();
     }
@@ -256,7 +257,7 @@ public:
         for (const auto &entry : entries)
             if ((entry.state == Waiting || entry.state == Running) && entry.job.arguments == job.arguments && entry.job.executable == job.executable) return false;
         const int id = nextId++; Entry entry; entry.job = job; entries.insert(id, entry);
-        auto *item = new QTreeWidgetItem({job.title, "Ожидает загрузки"});
+        auto *item = new QTreeWidgetItem({job.title, uiText("Ожидает загрузки", "Queued")});
         int position = 0;
         while (position < list->topLevelItemCount() && list->topLevelItem(position)->data(0, Qt::UserRole).toInt()) ++position;
         item->setData(0, Qt::UserRole, id); list->insertTopLevelItem(position, item);
@@ -271,7 +272,7 @@ public:
         for (const auto &file : files) {
             QTreeWidgetItem *item = nullptr;
             for (auto it = entries.cbegin(); it != entries.cend(); ++it) if (it.value().files.contains(file.path) && row(it.key())) { item = row(it.key()); break; }
-            if (!item) item = new QTreeWidgetItem(list, {QFileInfo(file.path).fileName(), (file.recent ? "Недавно · " : "") + QLocale().formattedDataSize(QFileInfo(file.path).size())});
+            if (!item) item = new QTreeWidgetItem(list, {QFileInfo(file.path).fileName(), (file.recent ? uiText("Недавно · ", "Recent · ") : "") + QLocale().formattedDataSize(QFileInfo(file.path).size())});
             item->setIcon(0, file.icon); item->setData(0, Qt::UserRole + 1, file.path); item->setToolTip(0, file.path);
             if (selected.contains(file.path)) item->setSelected(true);
         }
