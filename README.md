@@ -2,7 +2,7 @@
 
 Небольшая программа для скачивания видео и музыки. Вставь ссылку, выбери качество и нажми «Скачать». Программа использует [yt-dlp](https://github.com/yt-dlp/yt-dlp) и FFmpeg.
 
-![Главное окно Kyt-dl GUI](screenshots/main-window.svg)
+![Главное окно Kyt-dl GUI](screenshots/main-window-2026-11-15.svg)
 
 ## Что умеет программа
 
