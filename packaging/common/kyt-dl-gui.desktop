@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Kyt-dl GUI
+Comment=Download videos and music with yt-dlp
+Exec=ytdlp-gui
+Icon=applications-multimedia
+Terminal=false
+Type=Application
+Categories=AudioVideo;Network;
