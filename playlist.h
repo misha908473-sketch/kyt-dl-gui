@@ -1,4 +1,5 @@
 #pragma once
+#include "uilanguage.h"
 #include <QtWidgets>
 #include <functional>
 
@@ -34,7 +35,7 @@ inline QList<PlaylistTrack> playlistTracks(const QJsonObject &info, const QStrin
     for (const auto &value : info.value("entries").toArray()) {
         PlaylistTrack track;
         const QJsonObject item = value.toObject();
-        track.title = item.value("title").toString("Недоступный трек");
+        track.title = item.value("title").toString(uiText("Недоступный трек", "Unavailable track"));
         track.artist = item.value("uploader").toString(item.value("channel").toString());
         track.seconds = qMax(0, item.value("duration").toInt());
         const QString id = item.value("id").toString();
@@ -61,7 +62,7 @@ class PlaylistSelection final : public QWidget {
     QLabel *count;
     QList<PlaylistTrack> tracks;
     void updateCount() {
-        count->setText(QString("Выбрано: %1 из %2").arg(selected().size()).arg(tracks.size()));
+        count->setText(QString(uiText("Выбрано: %1 из %2", "Selected: %1 of %2")).arg(selected().size()).arg(tracks.size()));
         if (changed) changed();
     }
 public:
@@ -70,17 +71,17 @@ public:
         setObjectName("playlistSelection");
         auto *layout = new QVBoxLayout(this); layout->setContentsMargins(0, 0, 0, 0);
         list = new QTreeWidget; list->setObjectName("playlistTracks"); list->setRootIsDecorated(false);
-        list->setHeaderLabels({"Композиция", "Длительность"});
+        list->setHeaderLabels({uiText("Композиция", "Track"), uiText("Длительность", "Duration")});
         list->header()->setSectionResizeMode(0, QHeaderView::Stretch);
         list->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-        list->setAccessibleName("Выбор композиций плейлиста");
+        list->setAccessibleName(uiText("Выбор композиций плейлиста", "Select playlist tracks"));
         list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
         const int rowHeight = qMax(list->fontMetrics().height() + 6, list->style()->pixelMetric(QStyle::PM_SmallIconSize) + 4);
         list->setUniformRowHeights(true);
         list->setMinimumHeight(list->header()->sizeHint().height() + rowHeight * 5 + list->frameWidth() * 2);
         list->setMaximumHeight(list->minimumHeight()); layout->addWidget(list);
         auto *actions = new QHBoxLayout;
-        auto *all = new QPushButton("Выбрать все"); auto *none = new QPushButton("Снять выбор"); count = new QLabel;
+        auto *all = new QPushButton(uiText("Выбрать все", "Select all")); auto *none = new QPushButton(uiText("Снять выбор", "Clear selection")); count = new QLabel;
         actions->addWidget(all); actions->addWidget(none); actions->addStretch(); actions->addWidget(count); layout->addLayout(actions);
         connect(list, &QTreeWidget::itemChanged, this, [this] { updateCount(); });
         const auto check = [this](bool checked) {
@@ -98,7 +99,7 @@ public:
         for (int i = 0; i < tracks.size(); ++i) {
             const auto &track = tracks[i];
             const QString duration = track.available ? (track.seconds > 0
-                ? QString("%1:%2").arg(track.seconds / 60).arg(track.seconds % 60, 2, 10, QChar('0')) : "—") : "Недоступно";
+                ? QString("%1:%2").arg(track.seconds / 60).arg(track.seconds % 60, 2, 10, QChar('0')) : "—") : uiText("Недоступно", "Unavailable");
             auto *row = new QTreeWidgetItem(list, {QString("%1. %2").arg(i + 1).arg(track.title), duration});
             row->setToolTip(0, track.artist);
             row->setSizeHint(0, QSize(0, qMax(list->fontMetrics().height() + 6, list->style()->pixelMetric(QStyle::PM_SmallIconSize) + 4)));
