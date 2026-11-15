@@ -1,0 +1,113 @@
+name: Build Fedora and Debian release packages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/build-linux-release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: "0.0.1"
+
+jobs:
+  debian:
+    name: Build Debian package
+    runs-on: ubuntu-latest
+    container: debian:stable-slim
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential ca-certificates cmake curl debhelper dpkg-dev g++ \
+            qt6-base-dev qt6-base-dev-tools tar
+
+      - name: Build .deb from the release source archive
+        run: |
+          set -eux
+          archive="kyt-dl-gui-${RELEASE_TAG}.tar.gz"
+          curl -fL "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${archive}" -o "/tmp/${archive}"
+          mkdir -p /tmp/kyt-dl-gui-source
+          first_entry="$(tar -tzf "/tmp/${archive}" | sed -n '1p')"
+          strip_components=0
+          case "${first_entry}" in */*) strip_components=1 ;; esac
+          tar -xzf "/tmp/${archive}" --strip-components="${strip_components}" -C /tmp/kyt-dl-gui-source
+          cp -a packaging/debian/debian /tmp/kyt-dl-gui-source/
+          mkdir -p /tmp/kyt-dl-gui-source/packaging/common
+          cp packaging/common/kyt-dl-gui.desktop /tmp/kyt-dl-gui-source/packaging/common/
+          chmod 0755 /tmp/kyt-dl-gui-source/debian/rules
+          cd /tmp/kyt-dl-gui-source
+          dpkg-buildpackage -b -us -uc -a amd64
+          mkdir -p "${GITHUB_WORKSPACE}/out"
+          cp ../*.deb "${GITHUB_WORKSPACE}/out/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debian-package
+          path: out/*.deb
+          if-no-files-found: error
+
+  fedora:
+    name: Build Fedora RPM
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y ca-certificates cmake curl gcc-c++ make qt6-qtbase-devel rpm-build tar gzip
+
+      - name: Build .rpm from the release source archive
+        run: |
+          set -eux
+          archive="kyt-dl-gui-${RELEASE_TAG}.tar.gz"
+          curl -fL "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${archive}" -o "/tmp/${archive}"
+          topdir="${HOME}/rpmbuild"
+          mkdir -p "${topdir}/BUILD" "${topdir}/BUILDROOT" "${topdir}/RPMS" "${topdir}/SOURCES" "${topdir}/SPECS" "${topdir}/SRPMS"
+          mkdir -p /tmp/kyt-dl-gui-source
+          first_entry="$(tar -tzf "/tmp/${archive}" | sed -n '1p')"
+          strip_components=0
+          case "${first_entry}" in */*) strip_components=1 ;; esac
+          tar -xzf "/tmp/${archive}" --strip-components="${strip_components}" -C /tmp/kyt-dl-gui-source
+          mkdir -p /tmp/normalized/kyt-dl-gui-${RELEASE_TAG}
+          cp -a /tmp/kyt-dl-gui-source/. /tmp/normalized/kyt-dl-gui-${RELEASE_TAG}/
+          tar -czf "${topdir}/SOURCES/kyt-dl-gui-${RELEASE_TAG}.tar.gz" -C /tmp/normalized "kyt-dl-gui-${RELEASE_TAG}"
+          cp packaging/common/kyt-dl-gui.desktop "${topdir}/SOURCES/"
+          cp packaging/fedora/kyt-dl-gui.spec "${topdir}/SPECS/"
+          rpmbuild -ba "${topdir}/SPECS/kyt-dl-gui.spec" --define "_topdir ${topdir}"
+          mkdir -p "${GITHUB_WORKSPACE}/out"
+          cp "${topdir}/RPMS/x86_64/"*.rpm "${GITHUB_WORKSPACE}/out/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedora-package
+          path: out/*.rpm
+          if-no-files-found: error
+
+  attach-to-release:
+    name: Attach packages to release 0.0.1
+    runs-on: ubuntu-latest
+    needs: [debian, fedora]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: debian-package
+          path: dist/debian
+      - uses: actions/download-artifact@v4
+        with:
+          name: fedora-package
+          path: dist/fedora
+      - name: Upload package files to the existing release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${RELEASE_TAG}" dist/debian/*.deb dist/fedora/*.rpm --clobber --repo "${GITHUB_REPOSITORY}"
