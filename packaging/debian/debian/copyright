@@ -1,0 +1,9 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: kyt-dl-gui
+Source: https://github.com/misha908473-sketch/kyt-dl-gui
+
+Files: *
+Copyright: 2026 Kyt-dl GUI contributors
+License: LicenseRef-Unknown
+ The upstream project has not selected a distribution license.
+ The source and package are distributed by the project owner.
