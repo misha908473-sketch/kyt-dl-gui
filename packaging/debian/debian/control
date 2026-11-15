@@ -1,0 +1,15 @@
+Source: kyt-dl-gui
+Section: video
+Priority: optional
+Maintainer: Kyt-dl GUI contributors <misha908473-sketch@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13), cmake, g++, qt6-base-dev, qt6-base-dev-tools
+Standards-Version: 4.7.2
+Rules-Requires-Root: no
+Homepage: https://github.com/misha908473-sketch/kyt-dl-gui
+
+Package: kyt-dl-gui
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, yt-dlp, ffmpeg
+Description: desktop application for downloading video and audio
+ Kyt-dl GUI is a Qt desktop application that uses yt-dlp to download
+ video and audio from supported websites.
