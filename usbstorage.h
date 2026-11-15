@@ -1,4 +1,5 @@
 #pragma once
+#include "uilanguage.h"
 #include <QtWidgets>
 #include <QStorageInfo>
 #include <functional>
@@ -15,7 +16,7 @@ inline QString usbConnectionKey(const UsbVolume &volume) {
 }
 inline QString usbVolumeName(const QString &label, const QString &model, qint64 bytes) {
     if (!label.trimmed().isEmpty()) return label.trimmed();
-    const QString title = model.trimmed().isEmpty() ? "USB-накопитель" : model.trimmed();
+    const QString title = model.trimmed().isEmpty() ? uiText("USB-накопитель", "USB drive") : model.trimmed();
     return bytes > 0 ? title + " · " + QLocale().formattedDataSize(bytes) : title;
 }
 inline QList<UsbVolume> mountedUsbVolumes() {
@@ -84,17 +85,17 @@ public:
         for (const auto &volume : mounted) if (hasPreference(volume) && preferred(volume)) { select(volume, settings.value(preferenceKey(volume) + "AllFiles", false).toBool()); return; }
         for (const auto &volume : mounted) {
             if (hasPreference(volume)) continue;
-            QDialog dialog(parent); dialog.setObjectName("usbDestinationPrompt"); dialog.setWindowTitle("Сохранять музыку на USB?");
+            QDialog dialog(parent); dialog.setObjectName("usbDestinationPrompt"); dialog.setWindowTitle(uiText("Сохранять музыку на USB?", "Save music to USB?"));
             auto *layout = new QVBoxLayout(&dialog);
-            auto *message = new QLabel("Обнаружен носитель «" + volume.name + "».\nСохранять музыку в " + QDir(volume.root).filePath("yt-dlp") + "?\nОбычная папка загрузок останется в настройках.");
+            auto *message = new QLabel(uiText("Обнаружен носитель «", "Storage “") + volume.name + "».\nСохранять музыку в " + QDir(volume.root).filePath("yt-dlp") + "?\nОбычная папка загрузок останется в настройках.");
             message->setTextFormat(Qt::PlainText); message->setWordWrap(true); layout->addWidget(message);
-            auto *rememberChoice = new QCheckBox("Запомнить выбор"); rememberChoice->setObjectName("rememberUsb");
+            auto *rememberChoice = new QCheckBox(uiText("Запомнить выбор", "Remember my choice")); rememberChoice->setObjectName("rememberUsb");
             rememberChoice->setEnabled(!volume.id.isEmpty());
-            if (volume.id.isEmpty()) rememberChoice->setToolTip("Не удалось определить постоянный идентификатор носителя.");
+            if (volume.id.isEmpty()) rememberChoice->setToolTip(uiText("Не удалось определить постоянный идентификатор носителя.", "Could not determine the storage device’s permanent ID."));
             layout->addWidget(rememberChoice);
             auto *buttons = new QDialogButtonBox;
-            auto *yes = buttons->addButton("Сохранять на USB", QDialogButtonBox::AcceptRole);
-            auto *no = buttons->addButton("Оставить обычную папку", QDialogButtonBox::RejectRole);
+            auto *yes = buttons->addButton(uiText("Сохранять на USB", "Save to USB"), QDialogButtonBox::AcceptRole);
+            auto *no = buttons->addButton(uiText("Оставить обычную папку", "Keep regular folder"), QDialogButtonBox::RejectRole);
             no->setDefault(true); layout->addWidget(buttons);
             QObject::connect(yes, &QPushButton::clicked, &dialog, &QDialog::accept);
             QObject::connect(no, &QPushButton::clicked, &dialog, &QDialog::reject);
