@@ -68,6 +68,7 @@ public:
         connect(&refreshDelay, &QTimer::timeout, this, [this] { refreshFiles(); });
         deadline.setSingleShot(true);
         connect(&deadline, &QTimer::timeout, &decoder, &QProcess::kill);
+        connect(&decoder, &QProcess::readyReadStandardError, this, [this] { decoder.readAllStandardError(); });
         connect(&decoder, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
             [this](int code, QProcess::ExitStatus state) {
                 deadline.stop(); QPixmap image(cacheFile);
