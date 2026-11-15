@@ -1,0 +1,11 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --buildsystem=cmake
+
+override_dh_auto_configure:
+	dh_auto_configure -- -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/tmp
+	install -D -m 0644 packaging/common/kyt-dl-gui.desktop debian/tmp/usr/share/applications/kyt-dl-gui.desktop
