@@ -1,4 +1,4 @@
-# yt-dlp GUI
+# kyt-dlp GUI
 
 [English](README.md) | [Русский](README.ru.md)
 

@@ -1,6 +1,6 @@
 [English](README.md) | [Русский](README.ru.md)
 
-# yt-dlp GUI
+# kyt-dlp GUI
 
 Небольшая программа для скачивания видео и музыки. Вставь ссылку, выбери качество и нажми «Скачать». Программа использует [yt-dlp](https://github.com/yt-dlp/yt-dlp) и FFmpeg.
 
