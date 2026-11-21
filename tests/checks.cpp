@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
     preview.fetch(engine, "https://example.org/slow");
     preview.fetch(engine, "https://example.org/second");
     require(waitFor([&] { return !preview.isLoading(); }), "metadata completes");
-    require(preview.info().value("title").toString() == "Второе видео", "stale preview ignored");
+    require(preview.info().value("title").toString() == "Second video", "stale preview ignored");
     auto videos = availableFormats(preview.info(), false);
     auto audios = availableFormats(preview.info(), true);
     require(videos.size() == 2 && videos.first().height == 1080, "video formats sorted");
@@ -81,8 +81,8 @@ int main(int argc, char **argv) {
     auto *trackList = selection.findChild<QTreeWidget *>("playlistTracks");
     trackList->topLevelItem(0)->setCheckState(0, Qt::Unchecked);
     require(selection.selected() == QSet<int>{2}, "playlist selection retained");
-    button(selection, "Снять выбор")->click(); require(selection.selected().isEmpty(), "playlist clear selection");
-    button(selection, "Выбрать все")->click(); require(selection.selected() == QSet<int>({0, 2}), "playlist select all excludes unavailable");
+    button(selection, uiText("Снять выбор", "Clear selection"))->click(); require(selection.selected().isEmpty(), "playlist clear selection");
+    button(selection, uiText("Выбрать все", "Select all"))->click(); require(selection.selected() == QSet<int>({0, 2}), "playlist select all excludes unavailable");
 
     DownloadQueue queue;
     auto *list = queue.findChild<QTreeWidget *>("queueList");
@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
     require(completed.size() == 2, "final file callbacks emitted");
     queue.enqueue(job("https://example.org/fail"));
     require(waitFor([&] { return !queue.hasPending(); }), "failed job completes");
-    require(list->currentItem()->text(1).startsWith("Ошибка"), "failed state shown");
+    require(list->currentItem()->text(1).startsWith(uiText("Ошибка", "Error")), "failed state shown");
     queue.setConcurrency(3);
     queue.enqueue(job("https://example.org/slow-one"));
     queue.enqueue(job("https://example.org/slow-two"));
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
     DownloadJob missing = job("https://example.org/missing"); missing.executable = "/nonexistent/yt-dlp";
     queue.enqueue(missing); queue.enqueue(job("https://example.org/after-missing"));
     require(waitFor([&] { return !queue.hasPending(); }), "queue continues after failed start");
-    require(list->topLevelItem(list->topLevelItemCount()-1)->text(1) == "Готово", "next job succeeds");
+    require(list->topLevelItem(list->topLevelItemCount()-1)->text(1) == uiText("Готово", "Done"), "next job succeeds");
 
     const QString target = temporary.filePath("target"); QDir().mkpath(target);
     auto copied = operateFiles(FileOperation::Copy, {media}, target);
@@ -173,8 +173,8 @@ int main(int argc, char **argv) {
     auto *quality = window.findChild<QComboBox *>("quality");
     auto *enqueue = window.findChild<QPushButton *>("enqueue");
     require(!enqueue->isEnabled(), "empty URL disabled");
-    require(enqueue->text() == "&Скачать", "download action label");
-    for (auto *b : window.findChildren<QPushButton *>()) require(b->text() != "Проверить", "manual inspect button removed");
+    require(enqueue->text() == uiText("&Скачать", "&Download"), "download action label");
+    for (auto *b : window.findChildren<QPushButton *>()) require(b->text() != uiText("Проверить", "Check"), "manual inspect button removed");
     url->setText("https://example.org/second");
     require(waitFor([&] { return quality->count() == 3; }), "actual video formats appear in window");
     quality->setCurrentIndex(1);
@@ -203,14 +203,14 @@ int main(int argc, char **argv) {
     require(waitFor([&] { return quality->count() == 3; }), "preview restored after invalid input");
     auto *dialog = window.findChild<QDialog *>("preferences");
     require(dialog && !dialog->isVisible(), "settings start hidden");
-    for (auto *action : window.actions()) if (action->text() == "Настроить приложение…") action->trigger();
+    for (auto *action : window.actions()) if (action->text() == uiText("Настроить приложение…", "Configure application…")) action->trigger();
     require(dialog->isVisible(), "menu opens settings dialog");
     auto *directory = dialog->findChild<QLineEdit *>("downloadFolder");
     directory->setText("/tmp/cancelled-choice"); dialog->reject();
     require(directory->text() == temporary.path(), "cancel restores settings");
     auto *settingsSections = dialog->findChild<QListWidget *>("settingsSections");
     auto *settingsPages = dialog->findChild<QStackedWidget *>("settingsPages");
-    require(settingsSections && settingsSections->count() == 5 && settingsSections->item(2)->text() == "Устройства", "settings sidebar has grouped device section");
+    require(settingsSections && settingsSections->count() == 5 && settingsSections->item(2)->text() == uiText("Устройства", "Devices"), "settings sidebar has grouped device section");
     require(!(settingsSections->item(0)->flags() & Qt::ItemIsSelectable) && !(settingsSections->item(3)->flags() & Qt::ItemIsSelectable), "group headers cannot be selected");
     auto *settingsSearch = dialog->findChild<QLineEdit *>("settingsSearch");
     settingsSearch->setText("USB");
@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
     settingsSections->setCurrentRow(4); require(settingsPages->currentIndex() == 2, "grouped navigation maps advanced page correctly");
     settingsSections->setCurrentRow(1); require(settingsPages->currentIndex() == 0, "grouped navigation maps downloads page correctly");
     require(window.findChildren<QTabWidget *>().isEmpty(), "settings and main window have no top tabs");
-    for (auto *label : dialog->findChildren<QLabel *>()) require(!label->text().contains("Музыка в этом сеансе"), "session music row removed");
+    for (auto *label : dialog->findChildren<QLabel *>()) require(!label->text().contains(uiText("Музыка в этом сеансе", "Music in this session")), "session music row removed");
     auto *mode = dialog->findChild<QComboBox *>("queueMode");
     auto *parallelCount = dialog->findChild<QSpinBox *>("parallelCount");
     mode->setCurrentIndex(1); parallelCount->setValue(4); require(parallelCount->isEnabled(), "parallel count enabled");
@@ -231,15 +231,15 @@ int main(int argc, char **argv) {
     for (auto *a : appMenu->actions()) if (!a->isSeparator()) ++visibleActions;
     require(visibleActions == 2, "application menu only has settings and details");
     require(!queue.findChild<QCheckBox *>(), "old pause control removed");
-    require(action(queue, "Удалить") && action(queue, "Переместить") && action(queue, "Копировать"), "file operation context actions exist");
-    for (auto *button : queue.findChildren<QPushButton *>()) require(button->text() != "Удалить" && button->text() != "Переместить" && button->text() != "Копировать", "file actions removed from main view");
+    require(action(queue, uiText("Удалить", "Delete")) && action(queue, uiText("Переместить", "Move")) && action(queue, uiText("Копировать", "Copy")), "file operation context actions exist");
+    for (auto *button : queue.findChildren<QPushButton *>()) require(button->text() != uiText("Удалить", "Delete") && button->text() != uiText("Переместить", "Move") && button->text() != uiText("Копировать", "Copy"), "file actions removed from main view");
     auto *unified = window.findChild<QTreeWidget *>("queueList");
     require(unified && unified->topLevelItemCount() == 1, "folder file appears in shared list");
     require(unified->topLevelItem(0)->data(0, Qt::UserRole + 1).toString() == media, "shared list carries openable path");
     auto *details = window.findChild<QDialog *>("downloadDetails");
     require(details && !details->isVisible(), "details start hidden in separate dialog");
     unified->setCurrentItem(unified->topLevelItem(0));
-    action(window, "Подробности загрузки…")->trigger();
+    action(window, uiText("Подробности загрузки…", "Download details…"))->trigger();
     require(details->isVisible(), "menu opens details dialog");
     details->hide();
     window.resize(574, 480); QCoreApplication::processEvents();
@@ -273,12 +273,12 @@ int main(int argc, char **argv) {
     require(enqueue->text().contains("1"), "download count follows track selection");
     choose->click(); require(!inlineTracks->isVisible(), "playlist list collapses");
     choose->click(); require(inlineTracks->topLevelItem(0)->checkState(0) == Qt::Unchecked, "collapsed selection preserved");
-    button(window, "Выбрать все")->click();
+    button(window, uiText("Выбрать все", "Select all"))->click();
     choose->click();
     enqueue->click();
     require(waitFor([&] {
         int done = 0;
-        for (int i = 0; i < unified->topLevelItemCount(); ++i) if (unified->topLevelItem(i)->text(1) == "Готово") ++done;
+        for (int i = 0; i < unified->topLevelItemCount(); ++i) if (unified->topLevelItem(i)->text(1) == uiText("Готово", "Done")) ++done;
         return done == 2;
     }), "two selected tracks download as independent tasks");
     require(unified->topLevelItemCount() == 3, "playlist tasks coexist with existing file");
@@ -289,7 +289,7 @@ int main(int argc, char **argv) {
     const QString asyncDirectory = temporary.filePath("async-copy"); QDir().mkpath(asyncDirectory);
     for (int i = 0; i < unified->topLevelItemCount(); ++i)
         if (unified->topLevelItem(i)->data(0, Qt::UserRole + 1).toString() == media) unified->setCurrentItem(unified->topLevelItem(i));
-    require(action(window, "Копировать")->isEnabled(), "copy enabled for saved file");
+    require(action(window, uiText("Копировать", "Copy"))->isEnabled(), "copy enabled for saved file");
     QTimer::singleShot(100, [asyncDirectory] {
         if (auto *dialog = qobject_cast<QFileDialog *>(QApplication::activeModalWidget())) {
             dialog->setDirectory(asyncDirectory);
@@ -302,14 +302,14 @@ int main(int argc, char **argv) {
             std::cerr << "COPY WARNING: " << box->text().toStdString() << std::endl; box->reject();
         }
     });
-    action(window, "Копировать")->trigger();
+    action(window, uiText("Копировать", "Copy"))->trigger();
     const QString copiedPath = QDir(asyncDirectory).filePath(QFileInfo(media).fileName());
     auto *uiQueue = static_cast<DownloadQueue *>(unified->parentWidget());
     require(waitFor([&] { return QFile::exists(copiedPath) && !uiQueue->fileOperationInProgress(); }), "async copy completes and updates UI");
     for (int i = 0; i < unified->topLevelItemCount(); ++i)
         if (unified->topLevelItem(i)->data(0, Qt::UserRole + 1).toString() == media) unified->setCurrentItem(unified->topLevelItem(i));
     QTimer::singleShot(0, [] { if (auto *box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget())) box->reject(); });
-    action(window, "Удалить")->trigger();
+    action(window, uiText("Удалить", "Delete"))->trigger();
     require(QFile::exists(media), "cancelled trash confirmation preserves original");
     QUrl played;
     const auto player = uiQueue->openFile;
@@ -321,19 +321,19 @@ int main(int argc, char **argv) {
     require(played == QUrl::fromLocalFile(media), "double click opens selected file in player"); uiQueue->openFile = player;
     QStringList revealed;
     uiQueue->showFiles = [&](const QStringList &paths) { revealed = paths; };
-    require(action(window, "Показать в папке")->isEnabled(), "show in folder enabled for saved file");
-    action(window, "Показать в папке")->trigger();
+    require(action(window, uiText("Показать в папке", "Show in folder"))->isEnabled(), "show in folder enabled for saved file");
+    action(window, uiText("Показать в папке", "Show in folder"))->trigger();
     require(revealed.contains(media), "show in folder receives selected file path");
     QTimer::singleShot(0, [] {
         auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
-        require(menu && menu->objectName() == "fileContextMenu" && menu->actions().size() == 4 && menu->actions().first()->text() == "Показать в папке", "right click includes show in folder"); menu->close();
+        require(menu && menu->objectName() == "fileContextMenu" && menu->actions().size() == 4 && menu->actions().first()->text() == uiText("Показать в папке", "Show in folder"), "right click includes show in folder"); menu->close();
     });
     const QPoint point = unified->visualItemRect(selectedFile).center();
     QMetaObject::invokeMethod(unified, "customContextMenuRequested", Qt::DirectConnection, Q_ARG(QPoint, point));
     QList<UsbVolume> connected{flash};
     Window deviceWindow(false, [&] { return connected; }); deviceWindow.show();
     auto *devicePreferences = deviceWindow.findChild<QDialog *>("preferences");
-    for (auto *a : deviceWindow.actions()) if (a->text() == "Настроить приложение…") a->trigger();
+    for (auto *a : deviceWindow.actions()) if (a->text() == uiText("Настроить приложение…", "Configure application…")) a->trigger();
     auto *sections = devicePreferences->findChild<QListWidget *>("settingsSections");
     auto *pages = devicePreferences->findChild<QStackedWidget *>("settingsPages");
     QCoreApplication::processEvents();
@@ -352,7 +352,7 @@ int main(int argc, char **argv) {
     connected[0].name = "Renamed USB"; deviceWindow.checkUsbDevices();
     require(devices->item(1)->text() == "Renamed USB", "device name updates without changing selection");
     require(usbVolumeName("My USB", "Model", 1024) == "My USB", "filesystem label preferred as display name");
-    require(usbVolumeName("", "", 1024).startsWith("USB-накопитель"), "unnamed USB gets readable fallback instead of path");
+    require(usbVolumeName("", "", 1024).startsWith(uiText("USB-накопитель", "USB drive")), "unnamed USB gets readable fallback instead of path");
     QCoreApplication::processEvents(); devicePreferences->grab().save("/tmp/ytdlp-devices-preview.png");
     devices->setCurrentRow(1);
     auto *deviceButtons = devicePreferences->findChild<QDialogButtonBox *>();
@@ -362,10 +362,10 @@ int main(int argc, char **argv) {
     require(!devicePreferences->isVisible(), "mounted device selection applied");
     UsbMusicDestination applied(settings); applied.volumes = [&] { return connected; }; applied.offer(nullptr);
     require(applied.directory(false) == QDir(flash.root).filePath("yt-dlp"), "explicit device choice applies to video as well as audio");
-    for (auto *a : deviceWindow.actions()) if (a->text() == "Настроить приложение…") a->trigger();
+    for (auto *a : deviceWindow.actions()) if (a->text() == uiText("Настроить приложение…", "Configure application…")) a->trigger();
     require(devices->currentRow() == 1, "devices section reflects current USB choice");
     devices->setCurrentRow(0); devicePreferences->reject();
-    for (auto *a : deviceWindow.actions()) if (a->text() == "Настроить приложение…") a->trigger();
+    for (auto *a : deviceWindow.actions()) if (a->text() == uiText("Настроить приложение…", "Configure application…")) a->trigger();
     require(devices->currentRow() == 1, "cancel does not change destination");
     devices->setCurrentRow(0); deviceButtons->button(QDialogButtonBox::Ok)->click();
     UsbMusicDestination computerChoice(settings); computerChoice.volumes = [&] { return connected; }; computerChoice.offer(nullptr);
