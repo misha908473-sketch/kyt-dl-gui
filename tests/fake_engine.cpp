@@ -10,15 +10,15 @@ int main(int argc, char **argv) {
         if (url.contains("malformed")) { std::cout << "not-json\n"; return 0; }
         if (args.contains("--flat-playlist")) {
             if (!args.contains("--yes-playlist") || QUrl(url).path() != "/playlist") return 3;
-            const QJsonObject playlist{{"_type", "playlist"}, {"title", "Тестовый плейлист"}, {"_test_url", url},
+            const QJsonObject playlist{{"_type", "playlist"}, {"title", "Test playlist"}, {"_test_url", url},
                 {"entries", QJsonArray{
-                    QJsonObject{{"id", "aaaaaaaaaaa"}, {"title", "Первая песня"}, {"duration", 180}},
+                    QJsonObject{{"id", "aaaaaaaaaaa"}, {"title", "First song"}, {"duration", 180}},
                     QJsonObject{{"id", "bbbbbbbbbbb"}, {"title", "[Private video]"}, {"availability", "private"}},
-                    QJsonObject{{"id", "ccccccccccc"}, {"title", "Вторая песня"}, {"duration", 120}}, QJsonValue::Null}}};
+                    QJsonObject{{"id", "ccccccccccc"}, {"title", "Second song"}, {"duration", 120}}, QJsonValue::Null}}};
             std::cout << QJsonDocument(playlist).toJson(QJsonDocument::Compact).constData() << '\n'; return url.contains("PLpartial") ? 1 : 0;
         }
-        const QJsonObject info{{"title", url.contains("second") ? "Второе видео" : "Тестовое видео"},
-            {"uploader", "Автор"}, {"duration", 123}, {"formats", QJsonArray{
+        const QJsonObject info{{"title", url.contains("second") ? "Second video" : "Test video"},
+            {"uploader", "Creator"}, {"duration", 123}, {"formats", QJsonArray{
                 QJsonObject{{"format_id", "137"}, {"height", 1080}, {"vcodec", "avc1"}, {"acodec", "none"}, {"ext", "mp4"}, {"filesize", 1000000}},
                 QJsonObject{{"format_id", "22"}, {"height", 720}, {"vcodec", "avc1"}, {"acodec", "aac"}, {"ext", "mp4"}, {"filesize", 700000}},
                 QJsonObject{{"format_id", "140"}, {"vcodec", "none"}, {"acodec", "aac"}, {"ext", "m4a"}, {"abr", 128}, {"filesize", 100000}}

@@ -4,7 +4,7 @@
 
 A small desktop app for downloading video and music. Paste a link, choose the quality, and click “Download”. The app uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) and FFmpeg.
 
-![Kyt-dl GUI main window](screenshots/main-window-2026-11-15.svg)
+![Kyt-dl GUI main window](screenshots/main-window.en.svg)
 
 ## Features
 
@@ -53,6 +53,8 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j2
 ./build/ytdlp-gui
 ```
+
+The interface uses English by default and Russian on systems with a Russian locale. To launch in English on Linux, run `LC_ALL=C ./build/ytdlp-gui`.
 
 After launching the app, you can set the path to yt-dlp in its settings. FFmpeg must be available in `PATH`.
 
