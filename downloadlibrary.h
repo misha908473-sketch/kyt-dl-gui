@@ -33,7 +33,7 @@ class DownloadLibrary final : public QObject {
         const QString mime = QMimeDatabase().mimeTypeForFile(file, QMimeDatabase::MatchExtension).name();
         const bool audio = mime.startsWith("audio/");
         if (!audio && !mime.startsWith("video/")) return;
-        if (QFile::exists(path + ".part") || QRegularExpression("\\.f[0-9]+\\.").match(file.fileName()).hasMatch()) return;
+        if (QFile::exists(path + ".part")) return;
         seen.insert(path);
         const QIcon fallback = QIcon::fromTheme(audio ? "audio-x-generic" : "video-x-generic",
             QApplication::style()->standardIcon(QStyle::SP_FileIcon));

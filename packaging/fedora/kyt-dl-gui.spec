@@ -1,5 +1,5 @@
 Name:           kyt-dl-gui
-Version:        0.0.1
+Version:        0.1.1
 Release:        1%{?dist}
 Summary:        Desktop application for downloading video and audio with yt-dlp
 License:        LicenseRef-Unknown

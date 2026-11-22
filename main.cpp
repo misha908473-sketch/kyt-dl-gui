@@ -186,7 +186,17 @@ class Window final : public QWidget {
         QStringList arguments{"--ignore-config", "--no-playlist", "--newline", "--no-colors", "--progress",
             "--progress-template", "download:GUI_PROGRESS:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s",
             "--print", "after_move:GUI_FILE:%(filepath)j", "--no-simulate",
-            "-P", destination, "-o", "%(title).180B [%(id)s].%(ext)s"};
+            "-P", destination};
+        QString variant = "%(height)sp-%(format_id).32B";
+        if (audioOnly) {
+            variant = "audio-%(format_id).32B";
+            if (encoding->currentIndex() > 0) {
+                variant = encoding->currentData().toString();
+                const QString rate = quality->currentData().toString();
+                if (!rate.isEmpty()) variant += "-" + rate;
+            }
+        }
+        arguments << "-o" << ("%(title).150B [%(id)s] [" + variant + "].%(ext)s");
         if (audioOnly) {
             if (encoding->currentIndex() == 0)
                 arguments << "-f" << quality->currentData().toString() << "-x" << "--audio-format" << "best";
@@ -206,7 +216,7 @@ class Window final : public QWidget {
             job.directory = destination; job.url = address; job.title = title; job.audio = audioOnly;
             if (!external.isEmpty()) { job.requiredMount = usb.volume().root; job.requiredDevice = usb.volume().device; job.requiredVolumeId = usb.volume().id; }
             job.choice = audioOnly ? (encoding->currentIndex() == 0 ? uiText("Исходное аудио", "Source audio") : encoding->currentData().toString().toUpper() + " · " + quality->currentText()) : quality->currentText();
-            const QString tempKey = destination + "\n" + address + "\n" + job.choice;
+            const QString tempKey = destination + "\n" + address + "\n" + arguments.join(QChar(0));
             const QString staging = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/partial/"
                 + QCryptographicHash::hash(tempKey.toUtf8(), QCryptographicHash::Sha256).toHex();
             job.arguments << "-P" << "temp:" + staging << "--" << address;

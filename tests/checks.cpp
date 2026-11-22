@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
     DownloadQueue queue;
     auto *list = queue.findChild<QTreeWidget *>("queueList");
     const QString record = temporary.filePath("order.txt");
-    const QString media = temporary.filePath("music.mp3");
+    const QString media = temporary.filePath("music.f123.mp3");
     QFile file(media); require(file.open(QIODevice::WriteOnly), "create media fixture"); file.write("fixture"); file.close();
     QStringList completed;
     queue.fileReady = [&](const QString &path) { completed.append(path); };

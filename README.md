@@ -20,28 +20,28 @@ yt-dlp and FFmpeg must be installed to download and process media. Website suppo
 
 ## Install on Arch Linux
 
-Download `kyt-dl-gui-0.0.1-1-x86_64.pkg.tar.zst` from [Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases), then install it:
+Download `kyt-dl-gui-0.1.1-1-x86_64.pkg.tar.zst` from [Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases), then install it:
 
 ```sh
-sudo pacman -U ./kyt-dl-gui-0.0.1-1-x86_64.pkg.tar.zst
+sudo pacman -U ./kyt-dl-gui-0.1.1-1-x86_64.pkg.tar.zst
 ```
 
 Install `yt-dlp` and `ffmpeg` too if they are not already installed.
 
 ## Install on Debian
 
-Download `kyt-dl-gui_0.0.1-1_amd64.deb` from [Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases), then install it:
+Download `kyt-dl-gui_0.1.1-1_amd64.deb` from [Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases), then install it:
 
 ```sh
-sudo apt install ./kyt-dl-gui_0.0.1-1_amd64.deb
+sudo apt install ./kyt-dl-gui_0.1.1-1_amd64.deb
 ```
 
 ## Install on Fedora
 
-Download `kyt-dl-gui-0.0.1-1.fc45.x86_64.rpm` from [Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases), then install it:
+Download `kyt-dl-gui-0.1.1-1.fc45.x86_64.rpm` from [Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases), then install it:
 
 ```sh
-sudo dnf install ./kyt-dl-gui-0.0.1-1.fc45.x86_64.rpm
+sudo dnf install ./kyt-dl-gui-0.1.1-1.fc45.x86_64.rpm
 ```
 
 ## Build from source
