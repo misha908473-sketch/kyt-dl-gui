@@ -35,6 +35,24 @@ class DownloadQueue final : public QWidget {
     QPlainTextEdit *log;
     QAction *trash, *move, *copy, *showInFolder;
     QAction *details;
+    QPushButton *retry;
+    bool alreadyPending(const DownloadJob &job) const {
+        for (const auto &entry : entries)
+            if ((entry.state == Waiting || entry.state == Running) &&
+                entry.job.arguments == job.arguments && entry.job.executable == job.executable) return true;
+        return false;
+    }
+    void retryFailed() {
+        for (auto it = entries.begin(); it != entries.end(); ++it) {
+            if (it->state != Failed || alreadyPending(it->job)) continue;
+            it->state = Waiting;
+            auto *item = row(it.key());
+            item->setText(1, uiText("Ожидает загрузки", "Waiting to download"));
+            item->setToolTip(1, {});
+            line(it.key(), uiText("Повторная попытка загрузки", "Retrying download"));
+        }
+        startNext();
+    }
     QDialog *detailsDialog;
     QFutureWatcher<FileOperationResult> fileWatcher;
     QTreeWidgetItem *row(int id) const {
@@ -59,6 +77,10 @@ class DownloadQueue final : public QWidget {
         details->setEnabled(list->currentItem() != nullptr);
     }
     void updateStatus() {
+        bool hasFailed = false;
+        for (const auto &entry : entries) if (entry.state == Failed) { hasFailed = true; break; }
+        retry->setVisible(hasFailed);
+        retry->setEnabled(!fileBusy && !closing);
         if (fileBusy) status->setText(uiText("Обработка файлов…", "Processing files…"));
         else {
             int waiting = 0;
@@ -200,6 +222,9 @@ public:
             for (auto *action : {showInFolder, trash, move, copy}) menu.addAction(action);
             menu.exec(list->viewport()->mapToGlobal(point));
         });
+        retry = new QPushButton(uiText("Повторить неудачные загрузки", "Retry failed downloads"));
+        layout->addWidget(retry, 0, Qt::AlignLeading);
+        connect(retry, &QPushButton::clicked, this, [this] { retryFailed(); });
         status = new QLabel; status->setWordWrap(true); status->setTextFormat(Qt::PlainText); layout->addWidget(status);
         details = new QAction(QIcon::fromTheme("document-properties"), uiText("Подробности загрузки…", "Download details…"), this);
         detailsDialog = new QDialog(this); detailsDialog->setObjectName("downloadDetails"); detailsDialog->setWindowTitle(uiText("Подробности загрузки", "Download details"));
@@ -254,8 +279,7 @@ public:
         running.clear();
     }
     bool enqueue(const DownloadJob &job) {
-        for (const auto &entry : entries)
-            if ((entry.state == Waiting || entry.state == Running) && entry.job.arguments == job.arguments && entry.job.executable == job.executable) return false;
+        if (alreadyPending(job)) return false;
         const int id = nextId++; Entry entry; entry.job = job; entries.insert(id, entry);
         auto *item = new QTreeWidgetItem({job.title, uiText("Ожидает загрузки", "Queued")});
         int position = 0;

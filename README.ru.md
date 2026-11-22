@@ -20,28 +20,28 @@
 
 ## Установка в Arch Linux
 
-Скачай пакет `kyt-dl-gui-0.1.1-1-x86_64.pkg.tar.zst` из [раздела Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases) и установи его:
+Скачай пакет `kyt-dl-gui-0.2.0-1-x86_64.pkg.tar.zst` из [раздела Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases) и установи его:
 
 ```sh
-sudo pacman -U ./kyt-dl-gui-0.1.1-1-x86_64.pkg.tar.zst
+sudo pacman -U ./kyt-dl-gui-0.2.0-1-x86_64.pkg.tar.zst
 ```
 
 Также установи `yt-dlp` и `ffmpeg`, если их ещё нет в системе.
 
 ## Установка в Debian
 
-Скачай файл `kyt-dl-gui_0.1.1-1_amd64.deb` из [раздела Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases) и установи его:
+Скачай файл `kyt-dl-gui_0.2.0-1_amd64.deb` из [раздела Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases) и установи его:
 
 ```sh
-sudo apt install ./kyt-dl-gui_0.1.1-1_amd64.deb
+sudo apt install ./kyt-dl-gui_0.2.0-1_amd64.deb
 ```
 
 ## Установка в Fedora
 
-Скачай файл `kyt-dl-gui-0.1.1-1.fc45.x86_64.rpm` из [раздела Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases) и установи его:
+Скачай файл `kyt-dl-gui-0.2.0-1.fc45.x86_64.rpm` из [раздела Releases](https://github.com/misha908473-sketch/kyt-dl-gui/releases) и установи его:
 
 ```sh
-sudo dnf install ./kyt-dl-gui-0.1.1-1.fc45.x86_64.rpm
+sudo dnf install ./kyt-dl-gui-0.2.0-1.fc45.x86_64.rpm
 ```
 
 ## Сборка из исходников

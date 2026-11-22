@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 env:
-  RELEASE_TAG: "0.1.1"
+  RELEASE_TAG: "0.2.0"
 
 jobs:
   debian:
@@ -105,7 +105,7 @@ jobs:
           tar --exclude=.git -cf - . | tar -xf - -C /tmp/arch-build/source
           cat > /tmp/arch-build/PKGBUILD <<'PKGBUILD'
           pkgname=kyt-dl-gui
-          pkgver=0.1.1
+          pkgver=0.2.0
           pkgrel=1
           pkgdesc="Qt desktop application for downloading video and audio with yt-dlp"
           arch=('x86_64')
@@ -143,7 +143,7 @@ jobs:
           if-no-files-found: error
 
   attach-to-release:
-    name: Attach packages to release 0.1.1
+    name: Attach packages to release 0.2.0
     runs-on: ubuntu-latest
     needs: [debian, fedora, arch]
     steps:
@@ -172,4 +172,4 @@ jobs:
             echo "Release already published"
             exit 0
           fi
-          gh release create "${RELEASE_TAG}" --target "${GITHUB_SHA}" --title "Kyt-dl GUI ${RELEASE_TAG}" --notes "Keep video qualities and audio bitrates in separate files. Show finished media with format-like names in the library." dist/debian/*.deb dist/fedora/*.rpm dist/arch/*.pkg.tar.zst dist/source/*.tar.gz --repo "${GITHUB_REPOSITORY}"
+          gh release create "${RELEASE_TAG}" --target "${GITHUB_SHA}" --title "Kyt-dl GUI ${RELEASE_TAG}" --notes "Retry failed downloads in one click. See available USB storage and estimated playlist size when exporting audio at a selected bitrate." dist/debian/*.deb dist/fedora/*.rpm dist/arch/*.pkg.tar.zst dist/source/*.tar.gz --repo "${GITHUB_REPOSITORY}"

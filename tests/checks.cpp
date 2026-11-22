@@ -76,6 +76,11 @@ int main(int argc, char **argv) {
     require(tracks[0].url == "https://music.youtube.com/watch?v=aaaaaaaaaaa", "track URL does not recursively include playlist");
     playlistPreview.fetch(engine, "https://music.youtube.com/playlist?list=PLpartial");
     require(waitFor([&] { return !playlistPreview.isLoading(); }) && isPlaylistMetadata(playlistPreview.info()), "usable playlist survives partial extractor errors");
+    tracks[0].seconds = 60;
+    const auto lowSpace = playlistSpaceText(tracks, {0}, 320, 2399999);
+    require(lowSpace.contains("Может не хватить места"), "selected encoded track exceeds USB capacity");
+    require(!playlistSpaceText(tracks, {0}, 320, 2400000).contains("Может не хватить места"), "exact fit");
+    require(playlistSpaceText(tracks, {0}, 0, 100).contains("размер неизвестен"), "unknown size stays explicit");
     PlaylistSelection selection;
     selection.setTracks(tracks);
     auto *trackList = selection.findChild<QTreeWidget *>("playlistTracks");
@@ -106,6 +111,11 @@ int main(int argc, char **argv) {
     queue.enqueue(job("https://example.org/fail"));
     require(waitFor([&] { return !queue.hasPending(); }), "failed job completes");
     require(list->currentItem()->text(1).startsWith("Ошибка"), "failed state shown");
+    auto *retry = button(queue, "Повторить неудачные загрузки");
+    require(!retry->isHidden(), "failed jobs expose retry");
+    retry->click();
+    require(queue.runningCount() == 1 && list->topLevelItemCount() == 3, "retry reuses failed row only");
+    require(waitFor([&] { return !queue.hasPending(); }), "retry finishes");
     queue.setConcurrency(3);
     queue.enqueue(job("https://example.org/slow-one"));
     queue.enqueue(job("https://example.org/slow-two"));

@@ -1,3 +1,9 @@
+kyt-dl-gui (0.2.0-1) unstable; urgency=medium
+
+  * Retry failed downloads and estimate playlist space on USB.
+
+ -- Kyt-dl GUI contributors <misha908473-sketch@users.noreply.github.com>  Sun, 22 Nov 2026 12:00:00 +0300
+
 kyt-dl-gui (0.1.1-1) unstable; urgency=medium
 
   * Keep different download qualities in separate files.

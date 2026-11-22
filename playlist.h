@@ -9,6 +9,23 @@ struct PlaylistTrack {
     bool available = false;
 };
 
+inline QString playlistSpaceText(const QList<PlaylistTrack> &tracks, const QSet<int> &selected,
+                                 int kbps, qint64 freeBytes) {
+    qint64 knownBytes = 0;
+    int unknown = 0;
+    for (int index : selected) {
+        const auto &track = tracks.at(index);
+        if (kbps > 0 && track.seconds > 0) knownBytes += qint64(track.seconds) * kbps * 125;
+        else ++unknown;
+    }
+    QStringList parts{QString(uiText("Выбрано треков: %1", "Selected tracks: %1")).arg(selected.size())};
+    if (knownBytes > 0) parts << QString("≈ %1").arg(QLocale().formattedDataSize(knownBytes));
+    if (unknown) parts << QString(uiText("размер неизвестен для %1", "size unknown for %1")).arg(unknown);
+    parts << QString(uiText("на USB свободно %1", "%1 free on USB")).arg(QLocale().formattedDataSize(freeBytes));
+    if (knownBytes > freeBytes) parts << uiText("Может не хватить места", "May exceed available space");
+    return parts.join(" · ");
+}
+
 inline bool isYoutubePlaylistUrl(const QString &address) {
     const QUrl url(address);
     const QString host = url.host().toLower();

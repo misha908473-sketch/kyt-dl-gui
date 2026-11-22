@@ -37,6 +37,7 @@ class Window final : public QWidget {
     QRadioButton *video, *audio;
     QComboBox *quality, *encoding;
     QLabel *qualityHint, *validation, *encodingLabel;
+    QLabel *usbSpace;
     QPushButton *start, *playlistButton;
     PlaylistSelection *playlistPanel;
     QList<PlaylistTrack> tracks;
@@ -59,12 +60,29 @@ class Window final : public QWidget {
         return link.isValid() && !link.host().isEmpty()
             && (link.scheme() == "https" || link.scheme() == "http");
     }
+    void updateUsbSpace() {
+        usbSpace->hide();
+        if (selectedTracks.isEmpty() || usb.directory(type->checkedId() == 1).isEmpty()) return;
+        const QStorageInfo disk(usb.volume().root);
+        if (!disk.isValid() || !disk.isReady() || disk.bytesAvailable() < 0 ||
+            QDir::cleanPath(disk.rootPath()) != QDir::cleanPath(usb.volume().root)) return;
+
+        int kbps = 0;
+        if (type->checkedId() == 1 && encoding->currentIndex() > 0) {
+            const QString rate = quality->currentData().toString();
+            if (rate.endsWith('K')) kbps = rate.chopped(1).toInt();
+        }
+        usbSpace->setText(playlistSpaceText(tracks, selectedTracks, kbps, disk.bytesAvailable()));
+        usbSpace->show();
+    }
     void refreshLocations() {
+        updateUsbSpace();
         library->setDirectories({folder->text().trimmed(), usb.directory()});
         start->setToolTip(uiText("Музыка: ", "Music: ") + (usb.directory().isEmpty() ? folder->text().trimmed() : usb.directory()));
     }
     void error(const QString &text) { validation->setText(text); validation->show(); }
     void updateActions() {
+        updateUsbSpace();
         const bool playlist = isYoutubePlaylistUrl(url->text().trimmed()) || isPlaylistMetadata(preview->info());
         start->setEnabled(validLink() && !preview->isLoading() && (!playlist || !selectedTracks.isEmpty()));
         start->setText(playlist && !selectedTracks.isEmpty() ? QString(uiText("&Скачать (%1)", "&Download (%1)")).arg(selectedTracks.size()) : uiText("&Скачать", "&Download"));
@@ -388,6 +406,7 @@ protected:
 public:
     void checkUsbDevices() {
         if (checkingUsb) return;
+        updateUsbSpace();
         const auto mounted = usb.volumes();
         QSet<QString> connections; QStringList snapshot;
         for (const auto &volume : mounted) {
@@ -463,6 +482,7 @@ public:
         options->addRow(uiText("Качество:", "Quality:"), quality);
         qualityHint = new QLabel(this); qualityHint->hide();
         layout->addLayout(options);
+        usbSpace = new QLabel; usbSpace->setWordWrap(true); layout->addWidget(usbSpace);
         queue = new DownloadQueue; layout->addWidget(queue, 1);
         library = new DownloadLibrary(this);
         queue->addActionsToMenu(menu);
@@ -474,7 +494,7 @@ public:
         preview->changed = [this] { updatePlaylist(); updateQuality(); };
         videoHeight = settings.value("preferredHeight", 0).toInt();
         updateQuality();
-        connect(quality, qOverload<int>(&QComboBox::currentIndexChanged), this, [this] { rememberQuality(); });
+        connect(quality, qOverload<int>(&QComboBox::currentIndexChanged), this, [this] { rememberQuality(); if (!rebuilding) updateUsbSpace(); });
         connect(video, &QRadioButton::toggled, this, [this] { updateQuality(); });
         connect(encoding, qOverload<int>(&QComboBox::currentIndexChanged), this, [this] { updateQuality(); });
         inspectDelay.setSingleShot(true); inspectDelay.setInterval(800);
